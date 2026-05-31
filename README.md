@@ -4,6 +4,10 @@ An interactive web app for building intuition around Feynman's path integral thr
 
 The app shows a single particle moving from a source, through one of two slits, and toward a selected detector point on a screen. Each sampled path contributes a complex phase based on the free-particle action, and the running average is visualized as a vector sum.
 
+## Live Demo
+
+https://path-integral.vercel.app
+
 ## Features
 
 - Animated source-to-screen particle trajectories
