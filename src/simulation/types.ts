@@ -1,5 +1,6 @@
 export type SimulationParams = {
   slitSeparation: number;
+  mass: number;
   reducedPlanck: number;
   pathCount: number;
   animationSpeed: number;

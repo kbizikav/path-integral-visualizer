@@ -32,7 +32,7 @@ export function generatePathSamples(params: SimulationParams): PathSample[] {
     const firstLegLength = distance(GEOMETRY.sourceX, GEOMETRY.sourceY, GEOMETRY.slitX, slitY);
     const secondLegLength = distance(GEOMETRY.slitX, slitY, GEOMETRY.screenX, detectorY);
     const pathLength = firstLegLength + secondLegLength;
-    const action = calculateSlitPathAction(firstLegLength, secondLegLength);
+    const action = calculateSlitPathAction(firstLegLength, secondLegLength, params.mass);
     const phase = action / params.reducedPlanck;
 
     samples.push({

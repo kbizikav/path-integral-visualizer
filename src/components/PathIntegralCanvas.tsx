@@ -55,7 +55,14 @@ export function PathIntegralCanvas({
     animationProgressRef.current = 0;
     activePathIndexRef.current = selectRandomPathIndex(paths.length);
     lastFrameRef.current = null;
-  }, [resetSignal, params.slitSeparation, params.reducedPlanck, params.pathCount, paths.length]);
+  }, [
+    resetSignal,
+    params.slitSeparation,
+    params.mass,
+    params.reducedPlanck,
+    params.pathCount,
+    paths.length,
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -187,7 +194,7 @@ function drawScene({
   context.save();
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
   context.clearRect(0, 0, width, height);
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = "#fbfcff";
   context.fillRect(0, 0, width, height);
 
   const margins = getMargins(width, height);
@@ -201,17 +208,28 @@ function drawScene({
       (height - margins.top - margins.bottom);
   };
 
+  drawStageBackdrop(context, width, height, margins, mapX);
   drawGrid(context, width, height, margins);
   const screenX = mapX(GEOMETRY.screenX);
   drawFocusScreen(context, pathSum, params.detectorY, screenX, mapY, width);
-  drawAveragePhaseAtScreen(context, phaseState, screenX, mapY(params.detectorY), width);
+  drawAveragePhaseAtScreen(
+    context,
+    phaseState,
+    pathSum,
+    screenX,
+    mapY(params.detectorY),
+    width,
+    height,
+  );
   drawActiveParticlePath(
     context,
     activePath,
     mapX,
     mapY,
     progress,
+    params.mass,
     params.reducedPlanck,
+    phaseState.count + 1,
     width,
     height,
   );
@@ -220,6 +238,36 @@ function drawScene({
   drawLabels(context, mapX, mapY);
 
   context.restore();
+}
+
+function drawStageBackdrop(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  margins: { left: number; right: number; top: number; bottom: number },
+  mapX: (x: number) => number,
+): void {
+  const plotTop = margins.top;
+  const plotBottom = height - margins.bottom;
+  const sourceX = mapX(GEOMETRY.sourceX);
+  const slitX = mapX(GEOMETRY.slitX);
+  const screenX = mapX(GEOMETRY.screenX);
+  const gradient = context.createLinearGradient(margins.left, 0, width - margins.right, 0);
+
+  gradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+  gradient.addColorStop(0.42, "rgba(37, 111, 202, 0.035)");
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+  context.fillStyle = gradient;
+  context.fillRect(margins.left, plotTop, width - margins.left - margins.right, plotBottom - plotTop);
+
+  for (const [x, alpha] of [
+    [sourceX, 0.08],
+    [slitX, 0.1],
+    [screenX, 0.1],
+  ] as const) {
+    context.fillStyle = `rgba(37, 111, 202, ${alpha})`;
+    context.fillRect(x - 0.5, plotTop, 1, plotBottom - plotTop);
+  }
 }
 
 function selectRandomPathIndex(pathCount: number): number {
@@ -244,7 +292,7 @@ function drawGrid(
   height: number,
   margins: { left: number; right: number; top: number; bottom: number },
 ): void {
-  context.strokeStyle = "rgba(46, 52, 64, 0.08)";
+  context.strokeStyle = "rgba(46, 52, 64, 0.07)";
   context.lineWidth = 1;
 
   for (let index = 0; index <= 6; index += 1) {
@@ -262,7 +310,9 @@ function drawActiveParticlePath(
   mapX: (x: number) => number,
   mapY: (y: number) => number,
   progress: number,
+  mass: number,
   reducedPlanck: number,
+  trialNumber: number,
   width: number,
   height: number,
 ): void {
@@ -284,12 +334,21 @@ function drawActiveParticlePath(
     control: { x: (slitX + screenX) / 2, y: mapY((path.controlY + path.detectorY) / 2) },
     end: { x: screenX, y: mapY(path.detectorY) },
   };
-  const firstLegAction = calculateFreeParticleAction(path.firstLegLength, TRAVERSAL_TIME / 2);
-  const secondLegAction = calculateFreeParticleAction(path.secondLegLength, TRAVERSAL_TIME / 2);
+  const firstLegAction = calculateFreeParticleAction(
+    path.firstLegLength,
+    TRAVERSAL_TIME / 2,
+    mass,
+  );
+  const secondLegAction = calculateFreeParticleAction(
+    path.secondLegLength,
+    TRAVERSAL_TIME / 2,
+    mass,
+  );
   const currentAction = calculateAccumulatedAction(
     path.firstLegLength,
     path.secondLegLength,
     progress,
+    mass,
   );
   const currentPhase = currentAction / reducedPlanck;
   const firstLegReveal = clamp(progress / 0.5, 0, 1);
@@ -326,7 +385,7 @@ function drawActiveParticlePath(
 
   const particlePosition = getParticlePosition(firstLeg, secondLeg, progress);
   drawParticle(context, particlePosition, currentPhase);
-  drawParticleTelemetry(context, currentAction, currentPhase, width, height);
+  drawParticleTelemetry(context, currentAction, currentPhase, trialNumber, width, height);
 }
 
 function drawPhaseProgressionLeg(
@@ -406,12 +465,13 @@ function drawParticleTelemetry(
   context: CanvasRenderingContext2D,
   action: number,
   phase: number,
+  trialNumber: number,
   width: number,
   height: number,
 ): void {
-  const panelWidth = 190;
-  const panelHeight = 58;
-  const x = width / 2 - panelWidth / 2;
+  const panelWidth = 206;
+  const panelHeight = 66;
+  const x = 18;
   const y = height - panelHeight - 18;
   const vectorCenter = { x: x + panelWidth - 27, y: y + panelHeight / 2 + 6 };
   const vectorRadius = 15;
@@ -420,15 +480,22 @@ function drawParticleTelemetry(
   context.fillStyle = "rgba(255, 255, 255, 0.9)";
   context.strokeStyle = "rgba(33, 38, 45, 0.14)";
   context.lineWidth = 1;
+  context.shadowColor = "rgba(28, 38, 52, 0.12)";
+  context.shadowBlur = 16;
+  context.shadowOffsetY = 8;
   roundedRect(context, x, y, panelWidth, panelHeight, 8);
   context.fill();
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.shadowOffsetY = 0;
   context.stroke();
 
   context.fillStyle = "#25313d";
   context.font = "700 11px Inter, system-ui, sans-serif";
   context.textAlign = "left";
-  context.fillText(`S = ${action.toFixed(3)}`, x + 12, y + 21);
-  context.fillText(`φ = ${phase.toFixed(2)}`, x + 12, y + 42);
+  context.fillText(`trial ${trialNumber}`, x + 12, y + 17);
+  context.fillText(`S = ${action.toFixed(3)}`, x + 12, y + 36);
+  context.fillText(`φ = ${phase.toFixed(2)}`, x + 12, y + 55);
 
   drawComplexPlane(context, vectorCenter, vectorRadius);
   drawComplexVector(context, vectorCenter, vectorRadius, phase, {
@@ -439,41 +506,59 @@ function drawParticleTelemetry(
 function drawAveragePhaseAtScreen(
   context: CanvasRenderingContext2D,
   phaseState: AccumulatedPhaseState,
+  pathSum: PathSumResult,
   screenX: number,
   detectorScreenY: number,
   width: number,
+  height: number,
 ): void {
-  const radius = 24;
-  const center = {
-    x: Math.min(width - radius - 12, screenX + 48),
-    y: clamp(detectorScreenY, radius + 52, context.canvas.height / (window.devicePixelRatio || 1) - radius - 28),
+  const radius = 16;
+  const panelWidth = 92;
+  const panelHeight = 132;
+  const preferredRightX = screenX + 56;
+  const panelCenterX =
+    preferredRightX + panelWidth / 2 > width - 10 ? screenX - 64 : preferredRightX;
+  const panelX = clamp(panelCenterX, panelWidth / 2 + 10, width - panelWidth / 2 - 10);
+  const panelTop = clamp(detectorScreenY - 78, 10, height - panelHeight - 10);
+  const planeCenter = {
+    x: panelX,
+    y: panelTop + 82,
   };
   const averagePhase = Math.atan2(phaseState.average.imaginary, phaseState.average.real);
 
   context.fillStyle = "rgba(255, 255, 255, 0.88)";
   context.strokeStyle = "rgba(33, 38, 45, 0.12)";
   context.lineWidth = 1;
-  roundedRect(context, center.x - 39, center.y - 52, 78, 104, 8);
+  context.shadowColor = "rgba(28, 38, 52, 0.1)";
+  context.shadowBlur = 14;
+  context.shadowOffsetY = 7;
+  roundedRect(context, panelX - panelWidth / 2, panelTop, panelWidth, panelHeight, 8);
   context.fill();
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.shadowOffsetY = 0;
   context.stroke();
 
   context.fillStyle = "#25313d";
   context.font = "700 10px Inter, system-ui, sans-serif";
   context.textAlign = "center";
-  context.fillText("|r|²", center.x, center.y - 36);
+  context.fillText("|rₙ|²", panelX, panelTop + 18);
   context.fillStyle = "#0f62c4";
-  context.fillText(phaseState.coherence.toFixed(3), center.x, center.y - 23);
+  context.fillText(phaseState.coherence.toFixed(3), panelX, panelTop + 34);
+  context.fillStyle = "#657181";
+  context.font = "700 9px Inter, system-ui, sans-serif";
+  context.fillText(`|R|² ${pathSum.normalizedIntensity.toFixed(3)}`, panelX, panelTop + 50);
 
-  drawComplexPlane(context, center, radius);
+  drawComplexPlane(context, planeCenter, radius);
 
   for (const sample of phaseState.recentSamples) {
-    drawComplexVector(context, center, radius, sample.phase, {
+    drawComplexVector(context, planeCenter, radius, sample.phase, {
       stroke: `hsla(${phaseToHue(sample.phase)}, 78%, 45%, 0.1)`,
       lineWidth: 1,
     });
   }
 
-  drawComplexVector(context, center, radius, averagePhase, {
+  drawComplexVector(context, planeCenter, radius, averagePhase, {
     stroke: "#0b3d91",
     scale: Math.sqrt(phaseState.coherence),
     lineWidth: 3,
@@ -481,7 +566,7 @@ function drawAveragePhaseAtScreen(
 
   context.fillStyle = "#657181";
   context.font = "700 9px Inter, system-ui, sans-serif";
-  context.fillText(`n=${phaseState.count}`, center.x, center.y + 43);
+  context.fillText(`n=${phaseState.count}`, panelX, panelTop + 118);
 }
 
 function drawComplexVector(
@@ -569,7 +654,7 @@ function drawBarrier(
   const bottom = mapY(-GEOMETRY.screenHalfHeight);
   const slitYs = [-slitSeparation / 2, slitSeparation / 2];
 
-  context.strokeStyle = "#343a40";
+  context.strokeStyle = "#25313d";
   context.lineWidth = 6;
   context.lineCap = "round";
 
@@ -599,7 +684,7 @@ function drawBarrier(
     context.stroke();
   }
 
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = "#fbfcff";
   for (const slitY of slitYs) {
     context.beginPath();
     context.arc(barrierX, mapY(slitY), 8, 0, Math.PI * 2);

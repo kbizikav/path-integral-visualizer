@@ -12,7 +12,7 @@ import type {
 
 export function calculateAmplitudeAtY(
   detectorY: number,
-  params: Pick<SimulationParams, "slitSeparation" | "reducedPlanck">,
+  params: Pick<SimulationParams, "slitSeparation" | "mass" | "reducedPlanck">,
 ): ComplexAmplitude {
   const slitPositions = getSlitPositions(params.slitSeparation);
 
@@ -21,7 +21,7 @@ export function calculateAmplitudeAtY(
       const firstLeg = distance(GEOMETRY.sourceX, GEOMETRY.sourceY, GEOMETRY.slitX, slitY);
       const secondLeg = distance(GEOMETRY.slitX, slitY, GEOMETRY.screenX, detectorY);
       const length = firstLeg + secondLeg;
-      const phase = calculateSlitPathAction(firstLeg, secondLeg) / params.reducedPlanck;
+      const phase = calculateSlitPathAction(firstLeg, secondLeg, params.mass) / params.reducedPlanck;
       const verticalFalloff = Math.exp(-Math.abs(detectorY) * 0.32);
 
       return addComplex(sum, complexFromPhase(phase, verticalFalloff / Math.sqrt(length)));
@@ -31,7 +31,7 @@ export function calculateAmplitudeAtY(
 }
 
 export function calculateIntensityDistribution(
-  params: Pick<SimulationParams, "slitSeparation" | "reducedPlanck">,
+  params: Pick<SimulationParams, "slitSeparation" | "mass" | "reducedPlanck">,
   sampleCount = INTENSITY_SAMPLE_COUNT,
 ): IntensityPoint[] {
   const points: IntensityPoint[] = [];

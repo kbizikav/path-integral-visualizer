@@ -30,6 +30,15 @@ describe("path integral simulation", () => {
     expect(path.action).toBeGreaterThan(0);
   });
 
+  it("scales the action phase with particle mass", () => {
+    const [basePath] = generatePathSamples(DEFAULT_PARAMS);
+    const heavierParams = { ...DEFAULT_PARAMS, mass: DEFAULT_PARAMS.mass * 1.5 };
+    const [heavierPath] = generatePathSamples(heavierParams);
+
+    expect(heavierPath.action).toBeCloseTo(basePath.action * 1.5);
+    expect(heavierPath.phase).toBeCloseTo(heavierPath.action / heavierParams.reducedPlanck);
+  });
+
   it("normalizes intensity values between 0 and 1", () => {
     const distribution = calculateIntensityDistribution(DEFAULT_PARAMS, 96);
 

@@ -1,6 +1,6 @@
 :root {
-  color: #21262d;
-  background: #eef1f5;
+  color: #1c2430;
+  background: #edf1f6;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -31,16 +31,16 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  padding: 22px;
+  padding: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(238, 241, 245, 0)),
-    #eef1f5;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(237, 241, 246, 0.72) 42%, rgba(222, 230, 240, 0.84) 100%),
+    #edf1f6;
 }
 
 .workspace {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   width: min(1280px, 100%);
   min-height: calc(100vh - 44px);
   margin: 0 auto;
@@ -51,11 +51,12 @@ button {
   align-items: end;
   justify-content: space-between;
   gap: 16px;
+  padding: 0 2px;
 }
 
 .eyebrow {
   margin: 0 0 5px;
-  color: #51606f;
+  color: #5f6d7e;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -64,7 +65,7 @@ button {
 
 h1 {
   margin: 0;
-  color: #161b22;
+  color: #101722;
   font-size: clamp(1.8rem, 3vw, 3rem);
   line-height: 1.05;
   letter-spacing: 0;
@@ -80,11 +81,11 @@ h1 {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid rgba(33, 38, 45, 0.14);
+  border: 1px solid rgba(22, 31, 43, 0.12);
   border-radius: 8px;
   color: #17202a;
   background: #ffffff;
-  box-shadow: 0 8px 24px rgba(33, 38, 45, 0.08);
+  box-shadow: 0 10px 28px rgba(28, 38, 52, 0.1);
   cursor: pointer;
   transition:
     transform 160ms ease,
@@ -109,10 +110,12 @@ h1 {
 .visualizer-shell {
   overflow: hidden;
   min-height: 560px;
-  border: 1px solid rgba(33, 38, 45, 0.12);
+  border: 1px solid rgba(28, 38, 52, 0.1);
   border-radius: 8px;
-  background: #f7f8fb;
-  box-shadow: 0 22px 50px rgba(33, 38, 45, 0.11);
+  background: #f8fafc;
+  box-shadow:
+    0 24px 60px rgba(28, 38, 52, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .path-canvas {
@@ -127,14 +130,16 @@ h1 {
 .control-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   align-self: stretch;
   min-width: 0;
-  padding: 16px;
-  border: 1px solid rgba(33, 38, 45, 0.12);
+  padding: 18px;
+  border: 1px solid rgba(28, 38, 52, 0.1);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 40px rgba(33, 38, 45, 0.09);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 18px 46px rgba(28, 38, 52, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .control-stack {
@@ -147,7 +152,7 @@ h1 {
 .slider-control {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   color: #25313d;
   font-size: 0.93rem;
   font-weight: 700;
@@ -166,9 +171,62 @@ h1 {
 }
 
 .slider-control input[type="range"] {
+  appearance: none;
   width: 100%;
-  accent-color: #1369ce;
+  height: 18px;
+  background: transparent;
   cursor: pointer;
+}
+
+.slider-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 1px solid rgba(28, 38, 52, 0.12);
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #256fca 0%,
+    #3d7be0 var(--value-percent),
+    #e9edf3 var(--value-percent),
+    #f5f7fa 100%
+  );
+  box-shadow: inset 0 1px 2px rgba(28, 38, 52, 0.08);
+}
+
+.slider-control input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #256fca;
+  box-shadow:
+    0 4px 12px rgba(37, 111, 202, 0.34),
+    0 0 0 1px rgba(16, 23, 34, 0.08);
+}
+
+.slider-control input[type="range"]::-moz-range-track {
+  height: 6px;
+  border: 1px solid rgba(28, 38, 52, 0.12);
+  border-radius: 999px;
+  background: #e9edf3;
+}
+
+.slider-control input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #256fca;
+}
+
+.slider-control input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #256fca;
+  box-shadow:
+    0 4px 12px rgba(37, 111, 202, 0.34),
+    0 0 0 1px rgba(16, 23, 34, 0.08);
 }
 
 .phase-legend {
@@ -202,27 +260,58 @@ h1 {
 .formula-note {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: auto;
-  padding: 12px;
+  gap: 9px;
+  max-height: 300px;
+  overflow: auto;
+  padding: 11px;
   border: 1px solid rgba(33, 38, 45, 0.1);
   border-radius: 8px;
   background: #fbfcfd;
   color: #4d5967;
 }
 
-.formula-note h2 {
-  margin: 0 0 2px;
+.formula-note summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
   color: #25313d;
   font-size: 0.82rem;
+  font-weight: 800;
   line-height: 1.2;
+}
+
+.formula-note summary span {
+  min-width: 0;
+  color: #0f62c4;
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.formula-note summary::-webkit-details-marker {
+  display: none;
+}
+
+.formula-note summary::after {
+  content: "collapse";
+  flex: 0 0 auto;
+  color: #7b8794;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.formula-note:not([open]) summary::after {
+  content: "expand";
 }
 
 .formula-note__intro,
 .formula-note__item p {
   margin: 0;
   color: #657181;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 650;
   line-height: 1.4;
 }
@@ -235,7 +324,7 @@ h1 {
 
 .formula-note__equation {
   overflow-x: auto;
-  padding: 6px 8px;
+  padding: 5px 7px;
   border-radius: 6px;
   background: #ffffff;
 }
@@ -246,7 +335,7 @@ h1 {
 }
 
 .formula-note__equation .katex {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
 }
 
 @media (max-width: 900px) {
@@ -264,7 +353,7 @@ h1 {
 
   .visualizer-shell,
   .path-canvas {
-    min-height: 460px;
+    min-height: 420px;
   }
 
   .control-panel {

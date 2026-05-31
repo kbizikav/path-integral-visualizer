@@ -2,6 +2,7 @@ import type { SimulationGeometry, SimulationParams } from "./types";
 
 export const DEFAULT_PARAMS: SimulationParams = {
   slitSeparation: 0.28,
+  mass: 1,
   reducedPlanck: 0.035,
   pathCount: 180,
   animationSpeed: 1,
@@ -10,6 +11,7 @@ export const DEFAULT_PARAMS: SimulationParams = {
 
 export const PARAM_LIMITS = {
   slitSeparation: { min: 0.12, max: 0.5, step: 0.01 },
+  mass: { min: 0.35, max: 2.5, step: 0.05 },
   reducedPlanck: { min: 0.018, max: 0.075, step: 0.001 },
   pathCount: { min: 40, max: 420, step: 10 },
   animationSpeed: { min: 0.35, max: 2.5, step: 0.05 },
@@ -28,5 +30,4 @@ export const TAU = Math.PI * 2;
 export const INTENSITY_SAMPLE_COUNT = 180;
 export const PATH_SEED = 0x51f15e;
 export const SLIT_APERTURE_WIDTH = 0.074;
-export const PARTICLE_MASS = 1;
 export const TRAVERSAL_TIME = 1;

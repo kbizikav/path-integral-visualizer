@@ -86,6 +86,8 @@ function App() {
           />
 
           <aside className="control-panel" aria-label="Simulation settings">
+            <FormulaNote />
+
             <div className="control-stack">
               <SliderControl
                 id="detector-y"
@@ -106,6 +108,16 @@ function App() {
                 onChange={(value) => updateParam("slitSeparation", value)}
               />
               <SliderControl
+                id="mass"
+                label="Mass"
+                value={params.mass}
+                min={PARAM_LIMITS.mass.min}
+                max={PARAM_LIMITS.mass.max}
+                step={PARAM_LIMITS.mass.step}
+                precision={2}
+                onChange={(value) => updateParam("mass", value)}
+              />
+              <SliderControl
                 id="reduced-planck"
                 label="ℏ scale"
                 value={params.reducedPlanck}
@@ -114,16 +126,6 @@ function App() {
                 step={PARAM_LIMITS.reducedPlanck.step}
                 precision={3}
                 onChange={(value) => updateParam("reducedPlanck", value)}
-              />
-              <SliderControl
-                id="path-count"
-                label="Path samples"
-                value={params.pathCount}
-                min={PARAM_LIMITS.pathCount.min}
-                max={PARAM_LIMITS.pathCount.max}
-                step={PARAM_LIMITS.pathCount.step}
-                precision={0}
-                onChange={(value) => updateParam("pathCount", value)}
               />
               <SliderControl
                 id="animation-speed"
@@ -138,8 +140,6 @@ function App() {
             </div>
 
             <PhaseLegend />
-
-            <FormulaNote />
           </aside>
         </div>
       </section>

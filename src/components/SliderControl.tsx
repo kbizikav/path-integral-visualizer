@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import type { CSSProperties, ChangeEvent } from "react";
 
 type SliderControlProps = {
   id: string;
@@ -26,6 +26,7 @@ export function SliderControl({
   const handleChange = (event: ChangeEvent<HTMLInputElement>): void => {
     onChange(Number(event.target.value));
   };
+  const valuePercent = ((value - min) / (max - min)) * 100;
 
   return (
     <label className="slider-control" htmlFor={id}>
@@ -43,6 +44,7 @@ export function SliderControl({
         min={min}
         max={max}
         step={step}
+        style={{ "--value-percent": `${valuePercent}%` } as CSSProperties}
         onChange={handleChange}
       />
     </label>

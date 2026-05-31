@@ -14,7 +14,7 @@ const FORMULA_LINES: FormulaLine[] = [
   {
     latex: String.raw`S_j = \sum_{\ell}\frac{m\lVert \Delta x_\ell\rVert^2}{2\Delta t_\ell}`,
     description:
-      "Each sampled path uses the free-particle action accumulated over its straight segments.",
+      "Each sampled path uses the free-particle action; the Mass slider changes m, so it directly changes phase winding.",
   },
   {
     latex: String.raw`P(x)=\lvert A(x)\rvert^2`,
@@ -33,8 +33,10 @@ function renderLatex(latex: string): string {
 
 export function FormulaNote() {
   return (
-    <section className="formula-note" aria-label="Path integral model">
-      <h2>Model</h2>
+    <details className="formula-note" aria-label="Path integral model">
+      <summary>
+        Model: <span>A(x) ∝ Σ exp(iS/ℏ)</span>
+      </summary>
       <p className="formula-note__intro">
         This visualization samples possible slit paths and adds their action phases at the
         selected detector point.
@@ -48,6 +50,6 @@ export function FormulaNote() {
           <p>{line.description}</p>
         </div>
       ))}
-    </section>
+    </details>
   );
 }
