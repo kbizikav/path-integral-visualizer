@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { calculatePolylineAction } from "./action";
 import { DEFAULT_PARAMS } from "./constants";
 import { calculateIntensityDistribution, sumPathAmplitudes } from "./intensity";
 import { addPathToPhaseState, createEmptyPhaseState } from "./phaseAccumulation";
-import { generatePathSamples } from "./paths";
+import { calculatePathLength, generatePathSamples } from "./paths";
 
 describe("path integral simulation", () => {
   it("generates stable path samples for the same parameters", () => {
@@ -23,11 +24,15 @@ describe("path integral simulation", () => {
     expect(shifted).not.toEqual(base);
   });
 
-  it("calculates each sampled phase from the free-particle action", () => {
+  it("calculates each sampled phase from the jagged polyline action", () => {
     const [path] = generatePathSamples(DEFAULT_PARAMS);
+    const straightLength = calculatePathLength(path.slitY, path.detectorY);
 
     expect(path.phase).toBeCloseTo(path.action / DEFAULT_PARAMS.reducedPlanck);
+    expect(path.action).toBeCloseTo(calculatePolylineAction(path.points, DEFAULT_PARAMS.mass));
     expect(path.action).toBeGreaterThan(0);
+    expect(path.points.length).toBeGreaterThan(3);
+    expect(path.pathLength).toBeGreaterThan(straightLength);
   });
 
   it("scales the action phase with particle mass", () => {

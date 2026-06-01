@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { PointerEvent } from "react";
-import { calculateAccumulatedAction, calculateFreeParticleAction } from "../simulation/action";
+import { calculateAccumulatedPolylineAction, calculateFreeParticleAction } from "../simulation/action";
 import { GEOMETRY, SLIT_APERTURE_WIDTH, TRAVERSAL_TIME } from "../simulation/constants";
-import { clamp, phaseToHue } from "../simulation/math";
+import { clamp, distance, phaseToHue } from "../simulation/math";
 import type {
   AccumulatedPhaseState,
+  PathPoint,
   PathSample,
   PathSumResult,
   SimulationParams,
@@ -32,7 +33,6 @@ type Point = {
 };
 
 const WORLD_Y_PADDING = 0.12;
-const PHASE_SEGMENTS_PER_LEG = 26;
 const PARTICLE_RADIUS = 6;
 
 export function PathIntegralCanvas({
@@ -320,113 +320,97 @@ function drawActiveParticlePath(
     return;
   }
 
-  const sourceX = mapX(GEOMETRY.sourceX);
-  const sourceY = mapY(GEOMETRY.sourceY);
-  const slitX = mapX(GEOMETRY.slitX);
-  const screenX = mapX(GEOMETRY.screenX);
-  const firstLeg = {
-    start: { x: sourceX, y: sourceY },
-    control: { x: (sourceX + slitX) / 2, y: mapY(path.controlY * 0.45) },
-    end: { x: slitX, y: mapY(path.slitY) },
-  };
-  const secondLeg = {
-    start: { x: slitX, y: mapY(path.slitY) },
-    control: { x: (slitX + screenX) / 2, y: mapY((path.controlY + path.detectorY) / 2) },
-    end: { x: screenX, y: mapY(path.detectorY) },
-  };
-  const firstLegAction = calculateFreeParticleAction(
-    path.firstLegLength,
-    TRAVERSAL_TIME / 2,
-    mass,
-  );
-  const secondLegAction = calculateFreeParticleAction(
-    path.secondLegLength,
-    TRAVERSAL_TIME / 2,
-    mass,
-  );
-  const currentAction = calculateAccumulatedAction(
-    path.firstLegLength,
-    path.secondLegLength,
-    progress,
-    mass,
-  );
+  const screenPoints = path.points.map((point) => ({
+    x: mapX(point.x),
+    y: mapY(point.y),
+  }));
+  const currentAction = calculateAccumulatedPolylineAction(path.points, progress, mass);
   const currentPhase = currentAction / reducedPlanck;
-  const firstLegReveal = clamp(progress / 0.5, 0, 1);
-  const secondLegReveal = clamp((progress - 0.5) / 0.5, 0, 1);
 
   context.lineWidth = 4;
   context.lineCap = "round";
 
-  drawPhaseProgressionLeg(
+  drawPhaseProgressionPolyline(
     context,
-    firstLeg.start,
-    firstLeg.control,
-    firstLeg.end,
-    firstLegReveal,
-    0,
-    firstLegAction,
+    path.points,
+    screenPoints,
+    progress,
+    mass,
     reducedPlanck,
     0.76,
   );
 
-  if (secondLegReveal > 0) {
-    drawPhaseProgressionLeg(
-      context,
-      secondLeg.start,
-      secondLeg.control,
-      secondLeg.end,
-      secondLegReveal,
-      firstLegAction,
-      secondLegAction,
-      reducedPlanck,
-      0.76,
-    );
-  }
-
-  const particlePosition = getParticlePosition(firstLeg, secondLeg, progress);
+  const particlePosition = getParticlePositionOnPolyline(screenPoints, progress);
   drawParticle(context, particlePosition, currentPhase);
   drawParticleTelemetry(context, currentAction, currentPhase, trialNumber, width, height);
 }
 
-function drawPhaseProgressionLeg(
+function drawPhaseProgressionPolyline(
   context: CanvasRenderingContext2D,
-  start: Point,
-  control: Point,
-  end: Point,
+  worldPoints: PathPoint[],
+  screenPoints: Point[],
   reveal: number,
-  startAction: number,
-  legAction: number,
+  mass: number,
   reducedPlanck: number,
   alpha: number,
 ): void {
-  const visibleReveal = clamp(reveal, 0, 1);
-  const visibleSegments = Math.max(1, Math.ceil(PHASE_SEGMENTS_PER_LEG * visibleReveal));
+  const segmentCount = worldPoints.length - 1;
+  if (segmentCount <= 0) {
+    return;
+  }
 
-  for (let index = 0; index < visibleSegments; index += 1) {
-    const t0 = (index / visibleSegments) * visibleReveal;
-    const t1 = ((index + 1) / visibleSegments) * visibleReveal;
-    const segmentStart = quadraticPoint(start, control, end, t0);
-    const segmentEnd = quadraticPoint(start, control, end, t1);
-    const midpointAction = startAction + legAction * ((t0 + t1) / 2);
-    const hue = phaseToHue(midpointAction / reducedPlanck);
+  const segmentDuration = TRAVERSAL_TIME / segmentCount;
+  const visibleProgress = clamp(reveal, 0, 1) * segmentCount;
+  let accumulatedAction = 0;
 
-    context.strokeStyle = `hsla(${hue}, 82%, 45%, ${alpha})`;
-    context.beginPath();
-    context.moveTo(segmentStart.x, segmentStart.y);
-    context.lineTo(segmentEnd.x, segmentEnd.y);
-    context.stroke();
+  for (let index = 0; index < segmentCount; index += 1) {
+    const segmentReveal = clamp(visibleProgress - index, 0, 1);
+    const segmentLength = distance(
+      worldPoints[index].x,
+      worldPoints[index].y,
+      worldPoints[index + 1].x,
+      worldPoints[index + 1].y,
+    );
+    const segmentAction = calculateFreeParticleAction(segmentLength, segmentDuration, mass);
+
+    if (segmentReveal > 0) {
+      const segmentStart = screenPoints[index];
+      const segmentEnd = interpolatePoint(screenPoints[index], screenPoints[index + 1], segmentReveal);
+      const midpointAction = accumulatedAction + segmentAction * (segmentReveal / 2);
+      const hue = phaseToHue(midpointAction / reducedPlanck);
+
+      context.strokeStyle = `hsla(${hue}, 82%, 45%, ${alpha})`;
+      context.beginPath();
+      context.moveTo(segmentStart.x, segmentStart.y);
+      context.lineTo(segmentEnd.x, segmentEnd.y);
+      context.stroke();
+    }
+
+    accumulatedAction += segmentAction;
+    if (segmentReveal < 1) {
+      break;
+    }
   }
 }
 
-function getParticlePosition(
-  firstLeg: { start: Point; control: Point; end: Point },
-  secondLeg: { start: Point; control: Point; end: Point },
-  progress: number,
-): Point {
-  const leg = progress <= 0.5 ? firstLeg : secondLeg;
-  const legProgress = progress <= 0.5 ? progress / 0.5 : (progress - 0.5) / 0.5;
+function getParticlePositionOnPolyline(points: Point[], progress: number): Point {
+  const segmentCount = points.length - 1;
+  if (segmentCount <= 0) {
+    return points[0] ?? { x: 0, y: 0 };
+  }
 
-  return quadraticPoint(leg.start, leg.control, leg.end, clamp(legProgress, 0, 1));
+  const exactSegment = clamp(progress, 0, 1) * segmentCount;
+  const segmentIndex = Math.min(Math.floor(exactSegment), segmentCount - 1);
+  const segmentProgress = exactSegment - segmentIndex;
+
+  return interpolatePoint(points[segmentIndex], points[segmentIndex + 1], segmentProgress);
+}
+
+function interpolatePoint(start: Point, end: Point, progress: number): Point {
+  return {
+    x: start.x + (end.x - start.x) * progress,
+    y: start.y + (end.y - start.y) * progress,
+  };
 }
 
 function drawParticle(
@@ -632,15 +616,6 @@ function roundedRect(
   context.lineTo(x, y + radius);
   context.quadraticCurveTo(x, y, x + radius, y);
   context.closePath();
-}
-
-function quadraticPoint(start: Point, control: Point, end: Point, t: number): Point {
-  const oneMinusT = 1 - t;
-
-  return {
-    x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
-    y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y,
-  };
 }
 
 function drawBarrier(

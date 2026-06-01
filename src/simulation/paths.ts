@@ -1,7 +1,7 @@
-import { GEOMETRY, PATH_SEED, SLIT_APERTURE_WIDTH } from "./constants";
-import { calculateSlitPathAction } from "./action";
+import { GEOMETRY, PATH_POINTS_PER_LEG, PATH_ROUGHNESS, PATH_SEED, SLIT_APERTURE_WIDTH } from "./constants";
+import { calculatePolylineAction } from "./action";
 import { distance, seededRandom } from "./math";
-import type { PathSample, SimulationParams } from "./types";
+import type { PathPoint, PathSample, SimulationParams } from "./types";
 
 export function getSlitPositions(slitSeparation: number): [number, number] {
   return [-slitSeparation / 2, slitSeparation / 2];
@@ -11,6 +11,13 @@ export function calculatePathLength(slitY: number, detectorY: number): number {
   return (
     distance(GEOMETRY.sourceX, GEOMETRY.sourceY, GEOMETRY.slitX, slitY) +
     distance(GEOMETRY.slitX, slitY, GEOMETRY.screenX, detectorY)
+  );
+}
+
+export function calculatePolylineLength(points: PathPoint[]): number {
+  return points.slice(1).reduce(
+    (sum, point, index) => sum + distance(points[index].x, points[index].y, point.x, point.y),
+    0,
   );
 }
 
@@ -28,11 +35,14 @@ export function generatePathSamples(params: SimulationParams): PathSample[] {
     const apertureOffset = (random() * 2 - 1) * (SLIT_APERTURE_WIDTH / 2);
     const slitY = slitPositions[slitIndex] + apertureOffset;
     const detectorY = params.detectorY;
-    const controlY = slitY + (random() * 2 - 1) * 0.18;
-    const firstLegLength = distance(GEOMETRY.sourceX, GEOMETRY.sourceY, GEOMETRY.slitX, slitY);
-    const secondLegLength = distance(GEOMETRY.slitX, slitY, GEOMETRY.screenX, detectorY);
-    const pathLength = firstLegLength + secondLegLength;
-    const action = calculateSlitPathAction(firstLegLength, secondLegLength, params.mass);
+    const source = { x: GEOMETRY.sourceX, y: GEOMETRY.sourceY };
+    const slit = { x: GEOMETRY.slitX, y: slitY };
+    const detector = { x: GEOMETRY.screenX, y: detectorY };
+    const firstLegPoints = generateJaggedLeg(source, slit, random);
+    const secondLegPoints = generateJaggedLeg(slit, detector, random);
+    const points = [...firstLegPoints, ...secondLegPoints.slice(1)];
+    const pathLength = calculatePolylineLength(points);
+    const action = calculatePolylineAction(points, params.mass);
     const phase = action / params.reducedPlanck;
 
     samples.push({
@@ -40,9 +50,7 @@ export function generatePathSamples(params: SimulationParams): PathSample[] {
       slitIndex,
       slitY,
       detectorY,
-      controlY,
-      firstLegLength,
-      secondLegLength,
+      points,
       pathLength,
       action,
       phase,
@@ -51,4 +59,32 @@ export function generatePathSamples(params: SimulationParams): PathSample[] {
   }
 
   return samples;
+}
+
+function generateJaggedLeg(
+  start: PathPoint,
+  end: PathPoint,
+  random: () => number,
+): PathPoint[] {
+  const points: PathPoint[] = [];
+  const baseDy = end.y - start.y;
+
+  for (let index = 0; index <= PATH_POINTS_PER_LEG; index += 1) {
+    const t = index / PATH_POINTS_PER_LEG;
+    const bridgeEnvelope = Math.sin(Math.PI * t);
+    const alternatingKick = (index % 2 === 0 ? 1 : -1) * (0.35 + random() * 0.65);
+    const randomKick = random() * 2 - 1;
+    const roughOffset =
+      (randomKick * 0.72 + alternatingKick * 0.28) * PATH_ROUGHNESS * bridgeEnvelope;
+
+    points.push({
+      x: start.x + (end.x - start.x) * t,
+      y: start.y + baseDy * t + roughOffset,
+    });
+  }
+
+  points[0] = start;
+  points[points.length - 1] = end;
+
+  return points;
 }

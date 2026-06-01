@@ -30,4 +30,6 @@ export const TAU = Math.PI * 2;
 export const INTENSITY_SAMPLE_COUNT = 180;
 export const PATH_SEED = 0x51f15e;
 export const SLIT_APERTURE_WIDTH = 0.074;
+export const PATH_POINTS_PER_LEG = 10;
+export const PATH_ROUGHNESS = 0.16;
 export const TRAVERSAL_TIME = 1;

@@ -1,5 +1,5 @@
 import { GEOMETRY, INTENSITY_SAMPLE_COUNT } from "./constants";
-import { calculateSlitPathAction } from "./action";
+import { calculatePolylineAction } from "./action";
 import { addComplex, complexFromPhase, distance, magnitudeSquared } from "./math";
 import { getSlitPositions } from "./paths";
 import type {
@@ -21,7 +21,15 @@ export function calculateAmplitudeAtY(
       const firstLeg = distance(GEOMETRY.sourceX, GEOMETRY.sourceY, GEOMETRY.slitX, slitY);
       const secondLeg = distance(GEOMETRY.slitX, slitY, GEOMETRY.screenX, detectorY);
       const length = firstLeg + secondLeg;
-      const phase = calculateSlitPathAction(firstLeg, secondLeg, params.mass) / params.reducedPlanck;
+      const phase =
+        calculatePolylineAction(
+          [
+            { x: GEOMETRY.sourceX, y: GEOMETRY.sourceY },
+            { x: GEOMETRY.slitX, y: slitY },
+            { x: GEOMETRY.screenX, y: detectorY },
+          ],
+          params.mass,
+        ) / params.reducedPlanck;
       const verticalFalloff = Math.exp(-Math.abs(detectorY) * 0.32);
 
       return addComplex(sum, complexFromPhase(phase, verticalFalloff / Math.sqrt(length)));

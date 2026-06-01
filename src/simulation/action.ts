@@ -1,4 +1,6 @@
 import { TRAVERSAL_TIME } from "./constants";
+import { distance } from "./math";
+import type { PathPoint } from "./types";
 
 export function calculateFreeParticleAction(
   distance: number,
@@ -15,32 +17,58 @@ export function calculateFreeParticleAction(
   return (mass * distance * distance) / (2 * duration);
 }
 
-export function calculateSlitPathAction(
-  firstLegLength: number,
-  secondLegLength: number,
-  mass: number,
-): number {
-  const legDuration = TRAVERSAL_TIME / 2;
+export function calculatePolylineAction(points: PathPoint[], mass: number): number {
+  const segmentCount = points.length - 1;
+  if (segmentCount <= 0) {
+    return 0;
+  }
 
-  return (
-    calculateFreeParticleAction(firstLegLength, legDuration, mass) +
-    calculateFreeParticleAction(secondLegLength, legDuration, mass)
-  );
+  const segmentDuration = TRAVERSAL_TIME / segmentCount;
+
+  return points.slice(1).reduce((sum, point, index) => {
+    const previous = points[index];
+    const segmentLength = distance(previous.x, previous.y, point.x, point.y);
+
+    return sum + calculateFreeParticleAction(segmentLength, segmentDuration, mass);
+  }, 0);
 }
 
-export function calculateAccumulatedAction(
-  firstLegLength: number,
-  secondLegLength: number,
+export function calculateAccumulatedPolylineAction(
+  points: PathPoint[],
   pathProgress: number,
   mass: number,
 ): number {
-  const legDuration = TRAVERSAL_TIME / 2;
-  const firstLegAction = calculateFreeParticleAction(firstLegLength, legDuration, mass);
-  const secondLegAction = calculateFreeParticleAction(secondLegLength, legDuration, mass);
-
-  if (pathProgress <= 0.5) {
-    return firstLegAction * (pathProgress / 0.5);
+  const segmentCount = points.length - 1;
+  if (segmentCount <= 0) {
+    return 0;
   }
 
-  return firstLegAction + secondLegAction * ((pathProgress - 0.5) / 0.5);
+  const progress = Math.min(Math.max(pathProgress, 0), 1) * segmentCount;
+  const completeSegments = Math.floor(progress);
+  const segmentFraction = progress - completeSegments;
+  const segmentDuration = TRAVERSAL_TIME / segmentCount;
+  let action = 0;
+
+  for (let index = 0; index < completeSegments; index += 1) {
+    const segmentLength = distance(
+      points[index].x,
+      points[index].y,
+      points[index + 1].x,
+      points[index + 1].y,
+    );
+    action += calculateFreeParticleAction(segmentLength, segmentDuration, mass);
+  }
+
+  if (completeSegments < segmentCount && segmentFraction > 0) {
+    const segmentLength =
+      distance(
+        points[completeSegments].x,
+        points[completeSegments].y,
+        points[completeSegments + 1].x,
+        points[completeSegments + 1].y,
+      ) * segmentFraction;
+    action += calculateFreeParticleAction(segmentLength, segmentDuration * segmentFraction, mass);
+  }
+
+  return action;
 }

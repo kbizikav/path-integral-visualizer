@@ -12,14 +12,17 @@ export type ComplexAmplitude = {
   imaginary: number;
 };
 
+export type PathPoint = {
+  x: number;
+  y: number;
+};
+
 export type PathSample = {
   id: number;
   slitIndex: 0 | 1;
   slitY: number;
   detectorY: number;
-  controlY: number;
-  firstLegLength: number;
-  secondLegLength: number;
+  points: PathPoint[];
   pathLength: number;
   action: number;
   phase: number;
